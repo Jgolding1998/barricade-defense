@@ -67,7 +67,12 @@ const child=spawn(process.env.TOWER_PYTHON || 'python',['-u','serve.py','--port'
     await clickCell(page,49);check(await number(page,'credits')===125);
     await page.locator('#upgrade').click();check(await number(page,'credits')===93);check((await page.locator('#selection-title').innerText()).includes('LV 2'));
     await page.locator('#sell').click();check(await number(page,'credits')===139);
+    await frame(page);
+    const border=await page.locator('#board').evaluate(canvas=>{const ratio=Math.min(2,devicePixelRatio||1);return Array.from(canvas.getContext('2d').getImageData(104*ratio,210*ratio,1,1).data);});
+    check(border.slice(0,3).join(',')==='95,229,206');
+    check((await page.locator('#preview').textContent()).includes('45 credits'));
     await page.locator('[data-tool="wall"]').click();await clickCell(page,49);check(await number(page,'credits')===130);
+    check((await page.locator('[data-tool="wall"]').getAttribute('aria-label')).includes('10 credits'));
     await page.locator('#launch').click();check(await number(page,'wave')===1);check(await page.locator('#sell').isDisabled());
     await page.locator('#board').focus();await page.keyboard.press('Space');check((await page.locator('#phase').innerText())==='PAUSED');
     await frame(page);const paused=await page.locator('#board').evaluate(el=>el.toDataURL());await page.waitForTimeout(200);await frame(page);check(await page.locator('#board').evaluate(el=>el.toDataURL())===paused);
@@ -77,6 +82,7 @@ const child=spawn(process.env.TOWER_PYTHON || 'python',['-u','serve.py','--port'
     check(await number(page,'health')===11);check(await number(page,'credits')===153);
     await page.locator('#repair').click();check(await number(page,'health')===16);check(await number(page,'credits')===123);
     await page.locator('#sell').click();check(await number(page,'credits')===128);
+    check((await page.locator('[data-tool="wall"]').getAttribute('aria-label')).includes('9 credits'));
     await page.locator('#restart').click();check(await number(page,'credits')===170);check(await number(page,'health')===20);check(await number(page,'wave')===0);
     await page.locator('#paths').focus();const old=await page.locator('#paths').innerText();await page.keyboard.press('Space');check((await page.locator('#paths').innerText())!==old);check((await page.locator('#phase').innerText())==='PLANNING');
     receipt.desktop={completedWave:1,leaks:9,repairRestored:5,finalResetCredits:170};

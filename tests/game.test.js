@@ -15,6 +15,22 @@ test('the map starts with routes from both gates and a finite field', () => {
   assert.equal(game.phase, 'planning');
 });
 
+test('barrel targeting shares combat route priority instead of spawn order', () => {
+  const game = new Game();
+  assert.ok(game.build(49, 'dart'));
+  const tower = game.structures.get(49);
+  game.enemies = [50, 51].map((cell, id) => ({id, cell, progress: 0, x: cell % WIDTH,
+    y: Math.floor(cell / WIDTH), alive: true, hp: 100, armor: 0}));
+  const target = game.enemies[1];
+  assert.equal(game.targetFor(tower), target, 'a later spawn closer to the core has priority');
+  game.fireTowers(STEP);
+  const shot = game.effects.find(effect => effect.kind === 'shot');
+  assert.deepEqual([shot.tx, shot.ty], [target.x, target.y]);
+  target.alive = false;
+  assert.equal(game.targetFor(tower), game.enemies[0]);
+  assert.equal(game.targetFor(tower, {...game.towerStats(tower), range: 0}), null);
+});
+
 test('path fields use cardinal neighbors without row wrapping', () => {
   assert.deepEqual(neighbors(0), [1, WIDTH]);
   assert.ok(!neighbors(WIDTH - 1).includes(WIDTH));

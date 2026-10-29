@@ -173,7 +173,11 @@ function updateHud() {
   $('paths').setAttribute('aria-pressed', String(showPaths));
   $('repair').disabled = game.phase !== 'planning' || game.paused || game.health === MAX_HEALTH || game.credits < game.balance.repairCost;
   for (const price of document.querySelectorAll('[data-tool] .tool-price')) price.textContent = `${game.costOf(price.closest('[data-tool]').dataset.tool)} CR`;
-  for (const button of document.querySelectorAll('[data-tool]')) button.setAttribute('aria-pressed', String(button.dataset.tool === tool));
+  for (const button of document.querySelectorAll('[data-tool]')) {
+    const kind = button.dataset.tool;
+    button.setAttribute('aria-pressed', String(kind === tool));
+    button.setAttribute('aria-label', `${TYPES[kind].name}, ${game.costOf(kind)} credits. ${TYPES[kind].description}`);
+  }
   const tower = selected === null ? null : game.structures.get(selected);
   const type = TYPES[tower?.kind || tool];
   $('cell-label').textContent = selected === null ? 'NO CELL SELECTED' : `CELL ${selected % WIDTH + 1} / ${Math.floor(selected / WIDTH) + 1}`;
@@ -206,8 +210,9 @@ function circle(x, y, radius, fill, stroke) {
 function draw(alpha = 1) {
   context.clearRect(0, 0, VIEW_W, VIEW_H);
   terrain.draw(context);
+  const focus = hover ?? selected;
   let preview = null;
-  if (hover !== null && !game.structures.has(hover)) preview = planningPreview(hover, tool);
+  if (focus !== null && !game.structures.has(focus)) preview = planningPreview(focus, tool);
   if (showPaths) {
     for (const entry of ENTRY) line(game.route(entry, preview?.ok ? preview.distances : game.distances).map(xy), preview?.ok ? '#8c8069' : '#345e61', 2, [4, 7]);
   }
@@ -221,7 +226,6 @@ function draw(alpha = 1) {
   const core = xy(EXIT);
   circle(core.x, core.y, 23, '#473c2c', '#f2bd72'); circle(core.x, core.y, 14, '#f2bd72');
   context.fillStyle = '#17242b'; context.fillRect(core.x - 3, core.y - 7, 6, 14); context.fillRect(core.x - 7, core.y - 3, 14, 6);
-  const focus = hover ?? selected;
   if (focus !== null && !game.rocks.has(focus)) {
     const p = xy(focus), tower = game.structures.get(focus);
     const stats = tower ? game.towerStats(tower) : TYPES[tool];
@@ -247,7 +251,7 @@ function draw(alpha = 1) {
           line([{x: p.x - Math.cos(angle) * 12, y: p.y - Math.sin(angle) * 12}, {x: p.x + Math.cos(angle) * 12, y: p.y + Math.sin(angle) * 12}], color, 2);
         }
       } else {
-        const enemy = game.enemies.find(enemy => Math.hypot(enemy.x - tower.index % WIDTH, enemy.y - Math.floor(tower.index / WIDTH)) < game.towerStats(tower).range);
+        const enemy = game.targetFor(tower);
         const angle = enemy ? Math.atan2(enemy.y - Math.floor(tower.index / WIDTH), enemy.x - tower.index % WIDTH) : -Math.PI / 2;
         line([p, {x: p.x + Math.cos(angle) * (tower.kind === 'cannon' ? 20 : 22), y: p.y + Math.sin(angle) * (tower.kind === 'cannon' ? 20 : 22)}], color, tower.kind === 'cannon' ? 9 : 5);
       }

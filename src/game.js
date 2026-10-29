@@ -324,6 +324,18 @@ export class Game {
     }
   }
 
+  // Combat and the barrel preview use the same route-priority rule.
+  targetFor(tower, stats = this.towerStats(tower)) {
+    const position = coord(tower.index);
+    let target = null, priority = Infinity;
+    for (const enemy of this.enemies) {
+      if (!enemy.alive || distance(position, enemy) > stats.range) continue;
+      const urgency = this.distances[enemy.cell] - enemy.progress;
+      if (urgency < priority) { target = enemy; priority = urgency; }
+    }
+    return target;
+  }
+
   fireTowers(dt) {
     for (const tower of this.structures.values()) {
       if (tower.kind === 'wall') continue;
@@ -331,17 +343,7 @@ export class Game {
       tower.cooldown -= dt;
       if (tower.cooldown > 0) continue;
       const position = coord(tower.index);
-      // Target the enemy closest to the core along its route.
-      let target = null;
-      let priority = Infinity;
-      for (const enemy of this.enemies) {
-        if (!enemy.alive || distance(position, enemy) > stats.range) continue;
-        const urgency = this.distances[enemy.cell] - enemy.progress;
-        if (urgency < priority) {
-          target = enemy;
-          priority = urgency;
-        }
-      }
+      const target = this.targetFor(tower, stats);
       if (!target) {
         tower.cooldown = 0;
         continue;
