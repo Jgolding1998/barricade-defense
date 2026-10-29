@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Feedback, ideas or a problem
+    url: https://github.com/Jgolding1998/Jgolding1998/issues/new?template=feedback.yml
+    about: Share feedback for this game through the central feedback form.

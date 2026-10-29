@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#101c25">
+  <meta name="description" content="A tactical tower defense game. Build towers, bend the road, and make every credit count.">
+  <title>Barricade Defense</title>
+  <link rel="icon" href="favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="src/app.js"></script>
+</head>
+<body>
+<div class="shell">
+  <header class="masthead">
+    <a class="brand" href="/">
+      <span class="brand-icon" aria-hidden="true">B</span>
+      <span>BARRICADE<span class="brand-sub">DEFENSE SYSTEMS</span></span>
+    </a>
+    <span class="edition">SECTOR 07 <span class="signal" aria-hidden="true"></span> LOCAL SIMULATION</span>
+  </header>
+
+  <main>
+    <section class="intro">
+      <div>
+        <p class="eyebrow">TACTICAL / TOWER DEFENSE</p>
+        <h1>Make them take<br>the <em>long way.</em></h1>
+        <p class="lead">Towers stop the swarm. Barricades buy them time.<br>Every upgrade, repair and detour costs the same scarce credits.</p>
+      </div>
+      <div class="mission">
+        <span class="mission-index">12</span>
+        <div>WAVES TO HOLD<span>Two entrances. One core.<br>No perfect plan.</span></div>
+      </div>
+    </section>
+
+    <div class="play-layout">
+      <section class="arena-panel" aria-label="Defense board">
+        <div class="hud">
+          <div><span>SUPPLY</span><strong id="credits">170</strong><small>credits</small></div>
+          <div><span>CORE INTEGRITY</span><strong id="health">20</strong><small>/ 20</small></div>
+          <div><span>WAVE</span><strong id="wave">00</strong><small>/ 12</small></div>
+          <span id="phase" class="phase">PLANNING</span>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="board" width="960" height="610" tabindex="0" role="application"
+            aria-label="Defense grid, 16 columns and 10 rows. Use arrow keys to select a cell and Enter to build. Keys 1 through 4 choose a defense."
+            aria-describedby="controls"></canvas>
+          <div class="board-label">
+            <span><i class="dot mint"></i> ENTRY</span>
+            <span id="enemies">CLEAR AIRSPACE</span>
+            <span>CORE <i class="dot amber"></i></span>
+          </div>
+        </div>
+        <div class="command-bar">
+          <button id="launch" class="primary">Send wave 1 <span aria-hidden="true">↗</span></button>
+          <button id="pause" class="secondary">Pause</button>
+          <button id="speed" class="quiet" aria-label="Simulation speed, currently 1 times">1× speed</button>
+          <button id="paths" class="quiet" aria-pressed="true">Routes on</button>
+          <button id="sound" class="quiet" aria-pressed="false">Sound off</button>
+        </div>
+        <p id="message" class="message" role="status" aria-live="polite">Build a defense, then send the first wave.</p>
+        <p id="controls" class="controls">
+          <kbd>1–4</kbd> choose tool <span>·</span> click to build / inspect (tap twice on touch) <span>·</span>
+          <kbd>N</kbd> next wave <span>·</span> <kbd>Space</kbd> or <kbd>P</kbd> pause <span>·</span> <kbd>U</kbd> upgrade
+        </p>
+      </section>
+
+      <aside class="sidebar">
+        <section class="panel">
+          <div class="panel-heading"><span class="eyebrow">01 / BUILD</span><span class="tiny">SELECT A TOOL</span></div>
+          <div id="tools" class="tools"></div>
+          <div class="tradeoff">
+            <span class="tiny">THE TRADEOFF</span>
+            <p>Long routes buy time, but each barricade costs 1 more than the last. Too many walls leave you without firepower.</p>
+          </div>
+        </section>
+        <section class="panel selection">
+          <div class="panel-heading"><span class="eyebrow">02 / FIELD INTEL</span><span id="cell-label" class="tiny">NO CELL SELECTED</span></div>
+          <h2 id="selection-title">Needle</h2>
+          <p id="selection-detail">Fast, reliable shots. Best against scouts.</p>
+          <div id="tower-numbers" class="tower-numbers"></div>
+          <div class="selection-actions">
+            <button id="upgrade" class="secondary" disabled>Upgrade</button>
+            <button id="sell" class="quiet" disabled>Sell</button>
+          </div>
+          <p id="preview" class="preview">Choose a tool, then an empty grid cell.</p>
+        </section>
+        <section class="panel logistics">
+          <span class="eyebrow">03 / LOGISTICS</span>
+          <div class="logistics-row">
+            <div><h3>Repair the core</h3><p>+5 integrity between waves.</p></div>
+            <button id="repair" class="secondary">30 <span>CR</span></button>
+          </div>
+          <div class="result-row"><span>NEUTRALIZED <b id="kills">0</b></span><span>SCORE <b id="score">0</b></span></div>
+          <button id="restart" class="restart">Start a new run</button>
+        </section>
+      </aside>
+    </div>
+
+    <section class="briefing">
+      <div>
+        <span class="brief-number">01</span>
+        <h3>Read the field</h3>
+        <p>Mint dots enter from two gates. The amber core is their destination. Faint route lines show the shortest way there.</p>
+      </div>
+      <div>
+        <span class="brief-number">02</span>
+        <h3>Shape the fight</h3>
+        <p>Needles beat scouts. Mortars break groups and armor. Chill towers keep runners under fire. Enemies get much tougher each wave, so towers alone will not hold.</p>
+      </div>
+      <div>
+        <span class="brief-number">03</span>
+        <h3>Spend with intent</h3>
+        <p>Barricades start at 9 and rise by 1 for each one standing. Selling recovers 60%. Upgrade a strong position before opening another one. A complete blockade is rejected.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>ORIGINAL CODE / PROCEDURAL ART / NO ACCOUNTS</span>
+    <a href="https://github.com/Jgolding1998/Jgolding1998/issues/new?template=feedback.yml" target="_blank" rel="noopener noreferrer">Ideas or a problem?</a>
+    <a href="https://github.com/Jgolding1998/barricade-defense" target="_blank" rel="noopener noreferrer">Source</a>
+  </footer>
+</div>
+</body>
+</html>
