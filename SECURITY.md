@@ -18,6 +18,8 @@
 
 It is a convenience server for playing on your own machine, not a production web server.
 
-## Reporting a problem
+## Reporting a vulnerability
 
-Please use the [central feedback form](https://github.com/Jgolding1998/Jgolding1998/issues/new?template=feedback.yml). Do not include personal information or secrets.
+Use [Security > Report a vulnerability](https://github.com/Jgolding1998/barricade-defense/security/advisories/new) to send a private report. Do not submit vulnerability details through the public feedback form.
+
+Include the affected version, platform, expected behavior and a synthetic reproduction. Leave out credentials, personal information and private files.
