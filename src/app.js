@@ -1,6 +1,7 @@
 import {Game, WIDTH, HEIGHT, STEP, TYPES, ENTRY, EXIT, MAX_HEALTH} from './game.js';
 import {ignoreKey, isPauseKey} from './keys.js';
 import {createTerrainLayer} from './terrain.js';
+import {createPlanningPreview} from './preview.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('board');
@@ -12,6 +13,7 @@ motionQuery.addEventListener?.('change', event => { reducedMotion = event.matche
 const requestedSeed = new URLSearchParams(location.search).get('seed');
 const seed = requestedSeed && /^[0-9]{1,10}$/.test(requestedSeed) && Number(requestedSeed) <= 0xffffffff ? Number(requestedSeed) : 7129;
 const game = new Game(seed);
+const planningPreview = createPlanningPreview(game);
 const terrain = createTerrainLayer({width: WIDTH, height: HEIGHT, cell: CELL, left: LEFT, top: TOP, viewWidth: VIEW_W, viewHeight: VIEW_H});
 let tool = 'dart', hover = null, selected = null, showPaths = true, speed = 1;
 let last = 0, accumulator = 0, nextHud = 0, lastMessage = '', sound = false, audio = null, pointerKind = 'mouse';
@@ -189,7 +191,7 @@ function updateHud() {
   $('sell').textContent = tower ? `Sell · ${game.sellValue(selected)} CR` : 'Sell';
   $('sell').disabled = !game.canSell(selected);
   if (tower?.kind === 'wall' && game.phase === 'wave') $('sell').textContent = 'Locked during wave';
-  $('preview').textContent = tower ? 'Upgrade range and damage, or sell to recover some credits.' : selected !== null ? game.preview(selected, tool).reason : 'Choose a tool, then an empty grid cell.';
+  $('preview').textContent = tower ? 'Upgrade range and damage, or sell to recover some credits.' : selected !== null ? planningPreview(selected, tool).reason : 'Choose a tool, then an empty grid cell.';
   if (lastMessage !== game.message) { $('message').textContent = game.message; lastMessage = game.message; }
 }
 
@@ -209,7 +211,7 @@ function draw(alpha = 1) {
   context.clearRect(0, 0, VIEW_W, VIEW_H);
   terrain.draw(context);
   let preview = null;
-  if (hover !== null && !game.structures.has(hover)) preview = game.preview(hover, tool);
+  if (hover !== null && !game.structures.has(hover)) preview = planningPreview(hover, tool);
   if (showPaths) {
     for (const entry of ENTRY) line(game.route(entry, preview?.ok ? preview.distances : game.distances).map(xy), preview?.ok ? '#8c8069' : '#345e61', 2, [4, 7]);
   }

@@ -16,6 +16,7 @@ FILES = {
     "/src/app.js": ("src/app.js", "text/javascript; charset=utf-8"),
     "/src/game.js": ("src/game.js", "text/javascript; charset=utf-8"),
     "/src/terrain.js": ("src/terrain.js", "text/javascript; charset=utf-8"),
+    "/src/preview.js": ("src/preview.js", "text/javascript; charset=utf-8"),
     "/src/keys.js": ("src/keys.js", "text/javascript; charset=utf-8"),
 }
 CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"

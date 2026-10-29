@@ -59,6 +59,7 @@ index.html, styles.css, favicon.svg
 src/game.js     deterministic simulation (flow field, towers, waves, economy)
 src/app.js      canvas renderer, input, HUD, fixed-step loop with interpolation
 src/terrain.js  static terrain layer, rebuilt on resize or restart
+src/preview.js  unchanged planning previews reused; live enemies rechecked
 src/keys.js     keyboard guards
 serve.py        loopback-only static server
 tests/          Node and Python tests
