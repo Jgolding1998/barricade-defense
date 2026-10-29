@@ -126,25 +126,30 @@ export const STRATEGIES = {
   },
 };
 
-export function playRun(strategy, seed, {maxSteps = 60 * 60 * 40, balance, mode = 'classic', waveCap = Infinity} = {}) {
-  const game = new Game(seed, balance, mode);
-  const plan = STRATEGIES[strategy];
-  const spend = {wall: 0, tower: 0, upgrade: 0, repair: 0};
-  const track = (fn) => {
+export function trackSpending(game, spend, fn) {
     const before = {credits: game.credits, health: game.health, structures: new Map([...game.structures].map(([k, v]) => [k, {...v}]))};
     fn();
     for (const [cell, s] of game.structures) {
       const old = before.structures.get(cell);
-      if (!old) spend[s.kind === 'wall' ? 'wall' : 'tower'] += s.invested;
+      if (!old) {
+        const baseCost = s.kind === 'wall' ? s.invested : TYPES[s.kind].cost;
+        spend[s.kind === 'wall' ? 'wall' : 'tower'] += baseCost;
+        spend.upgrade += s.invested - baseCost;
+      }
       else if (s.level > old.level) spend.upgrade += s.invested - old.invested;
     }
-    if (game.health > before.health) spend.repair += 30 * Math.round((game.health - before.health) / 5);
-  };
+    if (game.health > before.health) spend.repair += game.balance.repairCost * Math.ceil((game.health - before.health) / game.balance.repairAmount);
+}
+
+export function playRun(strategy, seed, {maxSteps = 60 * 60 * 40, balance, mode = 'classic', waveCap = Infinity} = {}) {
+  const game = new Game(seed, balance, mode);
+  const plan = STRATEGIES[strategy];
+  const spend = {wall: 0, tower: 0, upgrade: 0, repair: 0};
   let steps = 0, minHealth = game.health;
   while (!['won', 'lost'].includes(game.phase) && steps < maxSteps) {
     if (game.phase === 'planning') {
       if (game.wave >= waveCap) break;
-      track(() => plan(game));
+      trackSpending(game, spend, () => plan(game));
       game.launch();
     }
     game.step(STEP);
