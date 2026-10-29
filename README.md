@@ -4,6 +4,8 @@ A tactical tower defense game for the browser. Enemies come through two gates an
 
 No accounts, packages, network requests or tracking. Plain JavaScript modules, HTML and CSS, with procedural canvas art and optional generated sound.
 
+![Barricade Defense board, shared resources and build controls](docs/gameplay.png)
+
 ## Play
 
 Requires Python 3.11 or newer.
