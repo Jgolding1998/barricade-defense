@@ -921,3 +921,6 @@ footer>span {
     scroll-behavior: auto!important;
   }
 }
+ .run-settings {display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin:0 0 1rem;font-size:.85rem;color:#b9ccd2;}
+ .run-settings select {min-height:2.5rem;max-width:100%;background:#142b35;color:#e9f4f2;border:1px solid #46616b;border-radius:4px;padding:.4rem;}
+ .sound-status {font-size:.8rem;color:#b9ccd2;margin:.6rem 1rem;}

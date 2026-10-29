@@ -30,10 +30,13 @@ test('Restart restores opted-in audio after a hidden tab while respecting sound 
     addEventListener(type, fn) {on(this, type, fn);}};
   const contexts = [];
   globals.window.AudioContext = class {
-    constructor() {this.state = 'suspended'; this.resumes = 0; contexts.push(this);}
+    constructor() {this.state = 'suspended'; this.resumes = 0; this.currentTime = 0; contexts.push(this);}
+    createGain() {return {gain: {setValueAtTime() {}, exponentialRampToValueAtTime() {}}, connect() {return this;}};}
+    createOscillator() {return {frequency: {setValueAtTime() {}, exponentialRampToValueAtTime() {}}, connect() {return this;}, start() {}, stop() {}};}
     resume() {this.resumes++; this.state = 'running'; return Promise.resolve();}
     suspend() {this.state = 'suspended'; return Promise.resolve();}
   };
+  globals.AudioContext = globals.window.AudioContext;
   globals.document = document;
   globals.addEventListener = (type, fn) => on(globals.window, type, fn);
   try {
@@ -42,24 +45,24 @@ test('Restart restores opted-in audio after a hidden tab while respecting sound 
       Object.defineProperty(globalThis, name, {configurable: true, writable: true, value});
     }
     await import('../src/app.js');
-    const click = id => fire(ids.get(id), 'click');
+    const click = async id => {fire(ids.get(id), 'click'); await Promise.resolve(); await Promise.resolve();};
     const hideAndReturn = () => {
       document.hidden = true; fire(document, 'visibilitychange');
       document.hidden = false; fire(document, 'visibilitychange');
     };
-    click('restart');
+    await click('restart');
     assert.equal(contexts.length, 0, 'Restart never creates an audio context before opt-in');
-    click('sound');
+    await click('sound');
     const audio = contexts[0];
     assert.equal(audio.state, 'running');
     hideAndReturn();
     assert.equal(audio.state, 'suspended');
-    click('restart');
+    await click('restart');
     assert.equal(ids.get('phase').textContent, 'PLANNING');
     assert.equal(audio.state, 'running', 'Restart resumes sound that was enabled before hiding');
-    click('sound');
+    await click('sound');
     const resumes = audio.resumes;
-    hideAndReturn(); click('restart');
+    hideAndReturn(); await click('restart');
     assert.equal(audio.state, 'suspended', 'Sound off remains off after Restart');
     assert.equal(audio.resumes, resumes);
   } finally {

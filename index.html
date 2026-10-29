@@ -30,9 +30,15 @@
         <p class="lead">Towers stop the swarm. Barricades buy them time.<br>Every upgrade, repair and detour costs the same scarce credits.</p>
       </div>
       <div class="mission">
-        <span class="mission-index">12</span>
+        <span id="mission-target" class="mission-index">12</span>
         <div>WAVES TO HOLD<span>Two entrances. One core.<br>No perfect plan.</span></div>
       </div>
+    </section>
+
+    <section class="run-settings" aria-label="Run settings">
+      <label for="run-mode">Run mode</label>
+      <select id="run-mode"><option value="classic">Classic campaign · 12 waves</option><option value="extended">Long campaign · 24 waves</option><option value="endless">Endless survival</option></select>
+      <span id="run-mode-status"></span>
     </section>
 
     <div class="play-layout">
@@ -40,7 +46,7 @@
         <div class="hud">
           <div><span>SUPPLY</span><strong id="credits">170</strong><small>credits</small></div>
           <div><span>CORE INTEGRITY</span><strong id="health">20</strong><small>/ 20</small></div>
-          <div><span>WAVE</span><strong id="wave">00</strong><small>/ 12</small></div>
+          <div><span>WAVE</span><strong id="wave">00</strong><small id="wave-target">/ 12</small></div>
           <span id="phase" class="phase">PLANNING</span>
         </div>
         <div class="canvas-wrap">
@@ -60,6 +66,7 @@
           <button id="paths" class="quiet" aria-pressed="true">Routes on</button>
           <button id="sound" class="quiet" aria-pressed="false">Sound off</button>
         </div>
+        <p id="sound-status" class="sound-status" role="status" aria-live="polite">Sound off. Enable Sound for a short test tone.</p>
         <p id="message" class="message" role="status" aria-live="polite">Build a defense, then send the first wave.</p>
         <p id="controls" class="controls">
           <kbd>1–4</kbd> choose tool <span>·</span> click to build / inspect (tap twice on touch) <span>·</span>

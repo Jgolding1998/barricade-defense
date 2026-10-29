@@ -1,7 +1,8 @@
-import {Game, WIDTH, HEIGHT, STEP, TYPES, ENTRY, EXIT, MAX_HEALTH} from './game.js';
+import {Game, WIDTH, HEIGHT, STEP, TYPES, ENTRY, EXIT, MAX_HEALTH, RUN_MODES, runMode} from './game.js';
 import {ignoreKey, isPauseKey} from './keys.js';
 import {createTerrainLayer} from './terrain.js';
 import {createPlanningPreview} from './preview.js';
+import {createAudio} from './audio.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('board');
@@ -12,11 +13,20 @@ let reducedMotion = motionQuery.matches;
 motionQuery.addEventListener?.('change', event => { reducedMotion = event.matches; });
 const requestedSeed = new URLSearchParams(location.search).get('seed');
 const seed = requestedSeed && /^[0-9]{1,10}$/.test(requestedSeed) && Number(requestedSeed) <= 0xffffffff ? Number(requestedSeed) : 7129;
-const game = new Game(seed);
+const game = new Game(seed, undefined, runMode(new URLSearchParams(location.search).get('run')));
+const modeSelect = $('run-mode');
+modeSelect.value = game.mode;
+const audio = createAudio(({enabled, busy, kind, message}) => {
+  $('sound').disabled = busy;
+  $('sound').setAttribute('aria-pressed', String(enabled));
+  $('sound').textContent = busy ? 'Enabling sound...' : enabled ? 'Sound on' : kind === 'unavailable' ? 'Sound unavailable' : 'Sound off';
+  $('sound-status').textContent = message;
+});
+modeSelect.addEventListener('change', updateHud);
 const planningPreview = createPlanningPreview(game);
 const terrain = createTerrainLayer({width: WIDTH, height: HEIGHT, cell: CELL, left: LEFT, top: TOP, viewWidth: VIEW_W, viewHeight: VIEW_H});
 let tool = 'dart', hover = null, selected = null, showPaths = true, speed = 1;
-let last = 0, accumulator = 0, nextHud = 0, lastMessage = '', sound = false, audio = null, pointerKind = 'mouse';
+let last = 0, accumulator = 0, nextHud = 0, lastMessage = '', pointerKind = 'mouse';
 
 const SVG = 'http://www.w3.org/2000/svg';
 const ICONS = {
@@ -113,7 +123,8 @@ canvas.addEventListener('keydown', event => {
 function togglePause() {
   if (!['planning', 'wave'].includes(game.phase)) return;
   game.setPaused(!game.paused);
-  if (!game.paused && sound) audio?.resume().catch(() => {});
+  if (!game.paused) audio.resume();
+  else audio.suspend();
   accumulator = 0;
   updateHud();
 }
@@ -124,26 +135,10 @@ $('paths').addEventListener('click', () => { showPaths = !showPaths; updateHud()
 $('repair').addEventListener('click', () => { game.repair(); updateHud(); });
 $('upgrade').addEventListener('click', () => { game.upgrade(selected); updateHud(); });
 $('sell').addEventListener('click', () => { game.sell(selected); updateHud(); });
-$('restart').addEventListener('click', () => { game.reset(); selected = hover = null; accumulator = 0; if (sound) audio?.resume().catch(() => {}); resize(); updateHud(); });
-$('sound').addEventListener('click', () => {
-  sound = !sound;
-  if (sound) {
-    try { audio ||= new (window.AudioContext || window.webkitAudioContext)(); audio.resume().catch(() => { sound = false; updateHud(); }); }
-    catch { sound = false; }
-  } else audio?.suspend().catch(() => {});
-  updateHud();
-});
+$('restart').addEventListener('click', () => { game.reset(game.seed, modeSelect.value); selected = hover = null; accumulator = 0; audio.resume(); resize(); updateHud(); });
+$('sound').addEventListener('click', () => {audio.toggle();});
 function beep(frequency, duration, type = 'sine') {
-  if (!sound || !audio || audio.state !== 'running') return;
-  try {
-    const oscillator = audio.createOscillator(), gain = audio.createGain();
-    oscillator.frequency.value = frequency; oscillator.type = type;
-    gain.gain.setValueAtTime(0.035, audio.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + duration);
-    oscillator.connect(gain); gain.connect(audio.destination);
-    oscillator.start(); oscillator.stop(audio.currentTime + duration);
-    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
-  } catch { sound = false; }
+  audio.play(frequency, duration, type);
 }
 addEventListener('keydown', event => {
   if (ignoreKey(event)) return;
@@ -153,11 +148,14 @@ addEventListener('keydown', event => {
   else if (event.key.toLowerCase() === 'u') { game.upgrade(selected); updateHud(); }
 });
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { game.setPaused(true); audio?.suspend().catch(() => {}); }
+  if (document.hidden) { game.setPaused(true); audio.suspend(); }
   accumulator = 0; last = 0; updateHud();
 });
 
 function updateHud() {
+  $('wave-target').textContent = game.targetWaves === null ? '/ endless' : `/ ${game.targetWaves}`;
+  $('mission-target').textContent = game.targetWaves === null ? '∞' : String(game.targetWaves);
+  $('run-mode-status').textContent = runMode(modeSelect.value) !== game.mode ? `Start a new run to apply. Current run: ${RUN_MODES[game.mode].label}.` : `${RUN_MODES[game.mode].label}. ${game.targetWaves === null ? 'Hold as long as the core survives.' : `Hold ${game.targetWaves} waves.`}`;
   $('credits').textContent = String(game.credits);
   $('health').textContent = String(game.health);
   $('wave').textContent = String(game.wave).padStart(2, '0');
@@ -173,8 +171,6 @@ function updateHud() {
   $('speed').setAttribute('aria-label', `Simulation speed, currently ${speed} times`);
   $('paths').textContent = showPaths ? 'Routes on' : 'Routes off';
   $('paths').setAttribute('aria-pressed', String(showPaths));
-  $('sound').textContent = sound ? 'Sound on' : 'Sound off';
-  $('sound').setAttribute('aria-pressed', String(sound));
   $('repair').disabled = game.phase !== 'planning' || game.paused || game.health === MAX_HEALTH || game.credits < game.balance.repairCost;
   for (const price of document.querySelectorAll('[data-tool] .tool-price')) price.textContent = `${game.costOf(price.closest('[data-tool]').dataset.tool)} CR`;
   for (const button of document.querySelectorAll('[data-tool]')) button.setAttribute('aria-pressed', String(button.dataset.tool === tool));
@@ -286,7 +282,7 @@ function draw(alpha = 1) {
     context.font = '600 46px Segoe UI, sans-serif';
     context.fillText(game.paused ? 'TACTICAL PAUSE' : game.phase === 'won' ? 'CORE SECURE' : 'CORE LOST', VIEW_W / 2, 280);
     context.fillStyle = '#becdd1'; context.font = '18px Segoe UI, sans-serif';
-    context.fillText(game.paused ? 'Resume when you are ready.' : game.phase === 'won' ? `Twelve waves held. Score ${game.score}.` : 'Try a longer route and a different tower mix.', VIEW_W / 2, 318);
+    context.fillText(game.paused ? 'Resume when you are ready.' : game.phase === 'won' ? `${game.targetWaves} waves held. Score ${game.score}.` : 'Try a longer route and a different tower mix.', VIEW_W / 2, 318);
     context.textAlign = 'start';
   }
 }

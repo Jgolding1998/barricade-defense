@@ -126,8 +126,8 @@ export const STRATEGIES = {
   },
 };
 
-export function playRun(strategy, seed, {maxSteps = 60 * 60 * 40, balance} = {}) {
-  const game = balance ? new Game(seed, balance) : new Game(seed);
+export function playRun(strategy, seed, {maxSteps = 60 * 60 * 40, balance, mode = 'classic', waveCap = Infinity} = {}) {
+  const game = new Game(seed, balance, mode);
   const plan = STRATEGIES[strategy];
   const spend = {wall: 0, tower: 0, upgrade: 0, repair: 0};
   const track = (fn) => {
@@ -143,6 +143,7 @@ export function playRun(strategy, seed, {maxSteps = 60 * 60 * 40, balance} = {})
   let steps = 0, minHealth = game.health;
   while (!['won', 'lost'].includes(game.phase) && steps < maxSteps) {
     if (game.phase === 'planning') {
+      if (game.wave >= waveCap) break;
       track(() => plan(game));
       game.launch();
     }

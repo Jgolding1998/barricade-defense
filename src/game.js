@@ -5,6 +5,20 @@
 export const WIDTH = 16;
 export const HEIGHT = 10;
 export const WAVES = 12;
+export const RUN_MODES = Object.freeze({
+  classic: Object.freeze({label: 'Classic campaign', waves: 12}),
+  extended: Object.freeze({label: 'Long campaign', waves: 24}),
+  endless: Object.freeze({label: 'Endless', waves: null}),
+});
+export const LIMITS = Object.freeze({contacts: 55, effects: 180, events: 256});
+export const runMode = value => typeof value === 'string' && Object.hasOwn(RUN_MODES, value) ? value : 'classic';
+// The original twelve waves retain their exact numbers. Later waves increase
+// health and speed more gently, with a fixed ceiling for endless play.
+export function difficulty(wave) {
+  const n = Number.isFinite(wave) ? Math.max(1, Math.floor(wave)) : 1;
+  return n <= WAVES ? n : Math.min(24, WAVES + (n - WAVES) * 0.4);
+}
+const add = (a, b) => Math.min(Number.MAX_SAFE_INTEGER, a + b);
 export const STEP = 1 / 60;
 export const ENTRY = [2 * WIDTH, 7 * WIDTH];
 export const EXIT = 5 * WIDTH + WIDTH - 1;
@@ -88,7 +102,7 @@ export function field(blocked) {
 }
 
 export function waveComposition(wave) {
-  const count = 7 + wave * 2;
+  const count = Math.min(LIMITS.contacts, 7 + Math.max(1, Number.isFinite(wave) ? Math.floor(wave) : 1) * 2);
   return Array.from({length: count}, (_, index) => {
     if (wave >= 4 && index % 5 === 4) return 'tank';
     if (wave >= 2 && index % 3 === 1) return 'runner';
@@ -97,12 +111,14 @@ export function waveComposition(wave) {
 }
 
 export class Game {
-  constructor(seed = 7129, balance = BALANCE) {
+  constructor(seed = 7129, balance = BALANCE, mode = 'classic') {
     this.balance = balance;
-    this.reset(seed);
+    this.reset(seed, mode);
   }
 
-  reset(seed = this.seed) {
+  reset(seed = this.seed, mode = this.mode) {
+    this.mode = runMode(mode);
+    this.targetWaves = RUN_MODES[this.mode].waves;
     this.seed = Number.isInteger(seed) ? seed >>> 0 : 7129;
     this.rng = random(this.seed);
     this.rocks = new Set(ROCKS);
@@ -231,7 +247,7 @@ export class Game {
     const refund = this.sellValue(index);
     this.structures.delete(index);
     this.distances = field(this.blocked());
-    this.credits += refund;
+    this.credits = add(this.credits, refund);
     this.message = `Defense sold for ${refund} credits. Selling returns ${Math.round(this.balance.sellRefund * 100)}% of your investment.`;
     return true;
   }
@@ -258,11 +274,12 @@ export class Game {
 
   enemyHp(kind, wave = this.wave) {
     const {hpBase, hpPerWave, hpGrowth} = this.balance;
-    return (hpBase + wave * hpPerWave) * hpGrowth ** Math.max(0, wave - 1) * ENEMIES[kind].hp;
+    const level = difficulty(wave);
+    return (hpBase + level * hpPerWave) * hpGrowth ** Math.max(0, level - 1) * ENEMIES[kind].hp;
   }
 
   describeNextWave() {
-    if (this.wave >= WAVES) return '';
+    if (this.targetWaves !== null && this.wave >= this.targetWaves) return '';
     const next = waveComposition(this.wave + 1);
     const count = kind => next.filter(k => k === kind).length;
     const parts = [`${count('scout')} scouts`];
@@ -272,8 +289,8 @@ export class Game {
   }
 
   launch() {
-    if (this.phase !== 'planning' || this.paused || this.wave >= WAVES) return false;
-    this.wave++;
+    if (this.phase !== 'planning' || this.paused || (this.targetWaves !== null && this.wave >= this.targetWaves)) return false;
+    this.wave = add(this.wave, 1);
     this.pending = waveComposition(this.wave);
     this.phase = 'wave';
     this.spawnClock = 0;
@@ -289,7 +306,7 @@ export class Game {
     const spec = ENEMIES[kind];
     const variation = 0.96 + this.rng() * 0.08;
     const hp = this.enemyHp(kind) * variation;
-    const speed = (this.balance.speedBase + this.wave * this.balance.speedPerWave) * spec.speed * variation;
+    const speed = (this.balance.speedBase + difficulty(this.wave) * this.balance.speedPerWave) * spec.speed * variation;
     this.enemies.push({id: this.sequence, kind, cell, next: null, progress: 0, x: position.x, y: position.y, px: position.x, py: position.y,
       hp, maxHp: hp, speed, armor: spec.armor, slowUntil: 0, reward: spec.reward, alive: true});
   }
@@ -299,9 +316,9 @@ export class Game {
     enemy.hp -= amount * (piercing ? 1 : 1 - enemy.armor);
     if (enemy.hp <= 0) {
       enemy.alive = false;
-      this.credits += enemy.reward;
-      this.kills++;
-      this.score += enemy.reward * 10;
+      this.credits = add(this.credits, enemy.reward);
+      this.kills = add(this.kills, 1);
+      this.score = add(this.score, enemy.reward * 10);
       this.effects.push({kind: 'burst', x: enemy.x, y: enemy.y, color: '#f2bd72', life: 0.3});
       this.events.push('kill');
     }
@@ -379,13 +396,13 @@ export class Game {
 
   finishWave() {
     const {waveBonusBase, waveBonusPerWave, winHealthBonus} = this.balance;
-    const bonus = waveBonusBase + this.wave * waveBonusPerWave;
-    this.credits += bonus;
-    this.score += bonus * 10;
-    if (this.wave === WAVES) {
+    const bonus = waveBonusBase + Math.min(24, this.wave) * waveBonusPerWave;
+    this.credits = add(this.credits, bonus);
+    this.score = add(this.score, bonus * 10);
+    if (this.targetWaves !== null && this.wave >= this.targetWaves) {
       this.phase = 'won';
-      this.score += this.health * winHealthBonus;
-      this.message = `All ${WAVES} waves held with ${this.health} core integrity. Score ${this.score}.`;
+      this.score = add(this.score, this.health * winHealthBonus);
+      this.message = `All ${this.targetWaves} waves held with ${this.health} core integrity. Score ${this.score}.`;
     } else {
       this.phase = 'planning';
       this.message = `Wave held. +${bonus} supply credits. ${this.describeNextWave()}`;
@@ -406,7 +423,8 @@ export class Game {
     this.fireTowers(dt);
     this.moveEnemies(dt);
     this.enemies = this.enemies.filter(enemy => enemy.alive);
-    this.effects = this.effects.slice(-180);
+    this.effects = this.effects.slice(-LIMITS.effects);
+    this.events = this.events.slice(-LIMITS.events);
     if (this.health <= 0) {
       this.phase = 'lost';
       this.paused = false;
