@@ -123,6 +123,20 @@ class AllowlistTests(ServerCase):
 
 
 class RequestValidationTests(ServerCase):
+    def test_default_http_port_accepts_browser_normalized_host(self):
+        # Keep the owned socket on its ephemeral port; simulate the configured
+        # listener identity without binding a privileged or occupied port 80.
+        with patch.object(self.server, "server_port", 80):
+            for host in (b"127.0.0.1", b"localhost"):
+                for suffix in (b"", b":80"):
+                    self.assertEqual(self.status(self.get(host=host + suffix)), 200)
+                    for origin_suffix in (b"", b":80"):
+                        origin = b"Origin: http://" + host + origin_suffix + b"\r\n"
+                        self.assertEqual(self.status(self.get(host=host + suffix, extra=origin)), 200)
+            for origin in (b"http://localhost", b"https://127.0.0.1", b"http://127.0.0.1:8080"):
+                self.assertEqual(self.status(self.get(host=b"127.0.0.1", extra=b"Origin: " + origin + b"\r\n")), 403)
+            self.assertEqual(self.status(self.get(host=b"attacker.invalid")), 403)
+
     def test_host_must_be_this_loopback_address_and_port(self):
         good = [f"127.0.0.1:{self.port}", f"localhost:{self.port}"]
         bad = ["evil.example", "127.0.0.1", f"127.0.0.1:{self.port + 1}", f"evil.example:{self.port}", f"[::1]:{self.port}", ""]

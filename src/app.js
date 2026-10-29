@@ -124,7 +124,7 @@ $('paths').addEventListener('click', () => { showPaths = !showPaths; updateHud()
 $('repair').addEventListener('click', () => { game.repair(); updateHud(); });
 $('upgrade').addEventListener('click', () => { game.upgrade(selected); updateHud(); });
 $('sell').addEventListener('click', () => { game.sell(selected); updateHud(); });
-$('restart').addEventListener('click', () => { game.reset(); selected = hover = null; accumulator = 0; resize(); updateHud(); });
+$('restart').addEventListener('click', () => { game.reset(); selected = hover = null; accumulator = 0; if (sound) audio?.resume().catch(() => {}); resize(); updateHud(); });
 $('sound').addEventListener('click', () => {
   sound = !sound;
   if (sound) {

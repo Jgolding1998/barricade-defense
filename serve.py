@@ -104,8 +104,14 @@ class Handler(BaseHTTPRequestHandler):
             return
         host = self.headers.get("Host", "")
         hosts = {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}
+        if self.server.server_port == 80:
+            hosts.update({"127.0.0.1", "localhost"})
         origin = self.headers.get("Origin")
-        if host not in hosts or (origin is not None and origin != "http://" + host) or self.headers.get("Sec-Fetch-Site", "none") not in {"none", "same-origin"}:
+        origins = {"http://" + host}
+        if self.server.server_port == 80:
+            base = "http://" + host.removesuffix(":80")
+            origins = {base, base + ":80"}
+        if host not in hosts or (origin is not None and origin not in origins) or self.headers.get("Sec-Fetch-Site", "none") not in {"none", "same-origin"}:
             self.reply(403, b"Open the local game address directly.")
             return
         try:

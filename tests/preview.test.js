@@ -14,6 +14,37 @@ test('unchanged planning previews reuse one checked field across frames', () => 
   assert.equal(calculations, 1);
 });
 
+test('stationary hover and keyboard-selected cell each retain their checked preview', () => {
+  const game = new Game();
+  const expected = [game.preview(49, 'dart'), game.preview(50, 'dart')];
+  const original = game.preview.bind(game);
+  let calculations = 0;
+  game.preview = (...args) => {calculations++; return original(...args);};
+  const preview = createPlanningPreview(game);
+  for (let frame = 0; frame < 600; frame++) {
+    if (frame % 6 === 0) assert.deepEqual(preview(49, 'dart'), expected[0]);
+    assert.deepEqual(preview(50, 'dart'), expected[1]);
+  }
+  assert.equal(calculations, 2);
+});
+
+test('planning previews retain at most two cells and clear both during pause', () => {
+  const game = new Game();
+  const original = game.preview.bind(game);
+  let calculations = 0;
+  game.preview = (...args) => {calculations++; return original(...args);};
+  const preview = createPlanningPreview(game);
+  for (const cell of [49, 50, 51, 49]) preview(cell, 'dart');
+  assert.equal(calculations, 4, 'A third cell evicts an older preview');
+  game.setPaused(true);
+  assert.equal(preview(49, 'dart').ok, false);
+  assert.equal(preview(50, 'dart').ok, false);
+  game.setPaused(false);
+  assert.equal(preview(49, 'dart').ok, true);
+  assert.equal(preview(50, 'dart').ok, true);
+  assert.equal(calculations, 8, 'Neither pre-pause entry survives');
+});
+
 test('layout, money, tool and price changes update planning validity', () => {
   const game = new Game(7129, {...BALANCE});
   const preview = createPlanningPreview(game);
