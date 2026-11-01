@@ -46,17 +46,23 @@ class ServerCase(unittest.TestCase):
 
     def raw(self, data):
         sock = self.connect()
-        sock.sendall(data)
-        chunks = []
-        while True:
-            try:
-                chunk = sock.recv(65536)
-            except (ConnectionResetError, ConnectionAbortedError):
-                break
-            if not chunk:
-                break
-            chunks.append(chunk)
-        return b"".join(chunks)
+        try:
+            sock.sendall(data)
+            chunks = []
+            while True:
+                try:
+                    chunk = sock.recv(65536)
+                except (ConnectionResetError, ConnectionAbortedError):
+                    break
+                if not chunk:
+                    break
+                chunks.append(chunk)
+            return b"".join(chunks)
+        finally:
+            # A received FIN closes the response direction only. Finish this
+            # owned request before opening another, rather than keeping every
+            # client socket alive until the test's final cleanup.
+            sock.close()
 
     def get(self, path=b"/", host=None, extra=b"", method=b"GET", version=b"HTTP/1.1"):
         host = host if host is not None else f"127.0.0.1:{self.port}".encode()
